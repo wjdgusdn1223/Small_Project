@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<!--
+    # 마우스에 따라 시야 변경이 되는 게임 구상
+    # 테이블로 화면이 구성되어 있으며 테두리는 없음
+    # 화면이 마우스의 움직임에 따라 움직여야 하니
+    # 배열의 크기는 중간에서 테두리까지의 거리만큼을 더한
+    # 테이블의 1.5배가 되어야 한다.
+        -> 1차 수정 1.5배가 아닌 배열은 테이블과 크기가 똑같아야함
+           마우스가 원래라면 가르켜야할 칸을 중간으로 옮기는 것 뿐이므로
+           배열이 더 클 필요가 없음
+
+    - 게임 방식
+    1. 게임 시작을 누르면 맵에 레이저 1자로 발사된다.
+    2. 레이저가 나오는 빈도 수가 많아지고 딜레이가 짧아진다.
+    3. 다 피하면 5초의 시간을 주고 그 다음 스테이지로 향한다.
+    4. 스테이지가 높아 질 수록 레이저의 갯수가 올라간다.
+    5. 레이저를 맞으면 게임은 종료 된다.
+
+    - 알고리즘 고찰
+    1. 마우스가 움직이는 거리와 정확히 같은 양만큼 반대 방향으로
+       테이블의 값들을 옮겨야 한다.
+    2. 배열은 테이블의 1.5배 크기이고 그 범위를 벗어나는 시야로 가면
+       모두 검은색으로 표시한다.
+        -> 1차 수정 1.5배가 아닌 배열은 테이블과 크기가 똑같아야함
+    3. 쏘는 총은 마우스 기준위치가 아닌 테이블 중앙으로 고정한다.
+    4. 제한시간은 인터벌로 설정한다.
+    5. 게임 특성 상 마우스를 숨겨야 하는 상황이 올 것 같아 찾아보니
+      <style type="text/css">
+        html {
+          cursor: none;
+	    }
+        </style>
+    6. 마우스가 맵 밖으로 탈출하면 매우 짜증나는 상황이 연출될 것 같아서
+       찾아보니 따로 방법이 없는 것 같음. -> 테두리의 일정 범위로 가면 죽게 하면 죽음
+
+    - 있어야 하는 메서드
+    1. 테이블 생성 메서드
+    2. 제한시간을 조정해주는 메서드
+    3. 제한시간에 따라 인터벌을 돌리는 메서드
+    4. 마우스 위치에 따른 테이블 좌표이동 메서드
+    5. 실시간으로 테이블 값에 따라 폭탄을 표시하는 메서드
+    6. 마우스 왼쪽클릭을 했을 때 폭탄을 없애줄 이벤트 메서드
+    7. 폭탄이 몇 개 남았고 다 처리 했을때 5초 타이머 및 제한시간 줄이는 메서드
+    8. 총의 재장전을 제어하는 메서드
+-->
+<style type="text/css">
+    html {
+        cursor: none;
+    }
+</style>
+<table id = "mgTable" cellpadding="0" border = "0" width="5000" align="center">
+    <tbody id = "mgTableBody">
+
+    </tbody>
+</table>
+<div id = "stageNum" align="center">
+
+</div>
+<script>
+    const TABLE_LENGTH = 5000;
+    const TABLE_SIZE_W = 37;
+    const TABLE_SIZE_H = 25;
+    const ARRAY_SIZE_W = TABLE_SIZE_W + TABLE_SIZE_W - 1;
+    const ARRAY_SIZE_H = TABLE_SIZE_H + TABLE_SIZE_H - 1;
+    const TABLE_START = (TABLE_SIZE_W-1)/2 + (ARRAY_SIZE_W * ((TABLE_SIZE_H-1)/2));
+    const TABLE_CENTER = TABLE_START * 2;
+    const PLAYER = 7;
+    const IN_MAP = 0;
+    const OUT_OF_MAP = -1;
+    const LAZER_W = 4;
+    const LAZER_H = 44;
+    const READY_LAZER_W = -2;
+    const READY_LAZER_H = -22;
+
+    createTable();
+    function createTable(){
+        var createTR = document.createElement("TR");
+        var createTD = document.createElement("TD");
+
+        var tableBody = document.getElementById("mgTableBody");
+
+        var idCount = TABLE_START;
+        for(var tmp = 0; tmp < TABLE_SIZE_H; tmp++) {
+            for (var tmp2 = 0; tmp2 < TABLE_SIZE_W; tmp2++) {
+                createTD = document.createElement("TD");
+
+                createTD.setAttribute('id', `${idCount}`);
+                createTD.setAttribute('onClick', 'lazerControl()');
+                createTD.setAttribute('onmouseover', `changeTableByMouse(${idCount})`);
+                createTD.style.backgroundColor = "gray";
+                createTR.appendChild(createTD);
+                createTD = document.createElement("TD");
+                idCount++;
+            }
+            createTR.setAttribute("height", `${TABLE_LENGTH / TABLE_SIZE_W}`);
+            tableBody.appendChild(createTR);
+            createTR = document.createElement("TR");
+            idCount += TABLE_SIZE_W-1;
+        }
+    }
+
+    function changeTableByMouse(thisTD) {
+        if(mgPlayer.isGameOver) {
+            mgPlayer.movement = thisTD - TABLE_CENTER;
+            tableColorControl();
+        }
+    }
+
+    function tableColorControl() {
+        var tableValue = TABLE_START + mgPlayer.movement;
+        for(var tmp = 0; tmp < TABLE_SIZE_H; tmp++){
+            for(var tmp2 = 0; tmp2 < TABLE_SIZE_W; tmp2++){
+                var tdBC = document.getElementById((TABLE_START + (ARRAY_SIZE_W * tmp)) + tmp2);
+                if(parseInt(tdBC.id) === TABLE_CENTER) {
+                    tdBC.style.backgroundColor = "red";
+                    isPlayerDead(tdBC, tableValue);
+                }
+                else if(mgPlayer.gameArray[tableValue] === IN_MAP)
+                    tdBC.style.backgroundColor = "gray";
+                else if(mgPlayer.gameArray[tableValue] === LAZER_W || mgPlayer.gameArray[tableValue] === LAZER_H)
+                    tdBC.style.backgroundColor = "yellow";
+                else if(mgPlayer.gameArray[tableValue] === OUT_OF_MAP)
+                    tdBC.style.backgroundColor = "black";
+                else if(mgPlayer.gameArray[tableValue] === READY_LAZER_W || mgPlayer.gameArray[tableValue] === READY_LAZER_H)
+                    tdBC.style.backgroundColor = "green";
+                tableValue++;
+            }
+            tableValue += TABLE_SIZE_W-1;
+        }
+    }
+
+    function isPlayerDead(tdBC, tableValue) {
+        tdBC.style.backgroundColor = "red";
+        if(mgPlayer.gameArray[tableValue] === 4 || mgPlayer.gameArray[tableValue] === 44){
+            clearInterval(mgPlayer.mgInterval);
+            mgPlayer.isGameOver = 0;
+        }
+    }
+
+    function lazerControl(){
+        if(mgPlayer.isMGPlaying === 0){
+            mgPlayer.mgInterval = setInterval(function(){
+                if(mgPlayer.timer%mgPlayer.stageDelay === 0) {
+                    mgPlayer.stage++;
+                    mgPlayer.lazerShot = 0;
+                    mgPlayer.lazerShotted = 0;
+                    mgPlayer.lazerCheck = 0;
+                    if(mgPlayer.lazerCount < TABLE_SIZE_H) {
+                        mgPlayer.lazerCount++;
+                    }
+                    mgPlayer.lazerValue_W = new Array();
+                    mgPlayer.lazerValue_H = new Array();
+                    mgPlayer.lazerDelay = new Array();
+                    for (var tmp = 0; tmp < mgPlayer.lazerCount; tmp++) {
+                        var lvw = parseInt((Math.random() * TABLE_SIZE_W) + ((TABLE_SIZE_W - 1) / 2));
+                        if(mgPlayer.lazerValue_W.indexOf(lvw) === -1)
+                            mgPlayer.lazerValue_W.push(lvw);
+                        else
+                            tmp--;
+                    }
+                    for (var tmp2 = 0; tmp2 < mgPlayer.lazerCount; tmp2++) {
+                        var lvh = (parseInt((Math.random() * TABLE_SIZE_H) + ((TABLE_SIZE_H - 1) / 2)));
+                        if(mgPlayer.lazerValue_H.indexOf(lvh) === -1)
+                            mgPlayer.lazerValue_H.push(lvh);
+                        else
+                            tmp2--;
+                    }
+                    for (var tmp3 = 0; tmp3 < mgPlayer.lazerCount * 2; tmp3++) {
+                        var ld = parseInt((parseInt((Math.random() * 7000) + 1000 + mgPlayer.stage * mgPlayer.stageDelay))/10)*10;
+                        if(mgPlayer.lazerDelay.indexOf(ld) === -1)
+                            mgPlayer.lazerDelay.push(ld);
+                        else
+                            tmp3--;
+                    }
+                    mgPlayer.lazerDelay.sort();
+                    mgPlayer.stageBox.innerHTML = "<h1>" + mgPlayer.stage + "</h1>";
+                }
+                if(mgPlayer.timer + 500 >= mgPlayer.lazerDelay[mgPlayer.lazerCheck]){
+                    if(mgPlayer.lazerCheck%2 === 0){
+                        for(var tmp4 = mgPlayer.lazerValue_W[mgPlayer.lazerCheck/2];
+                            tmp4 <= TABLE_START * 3; tmp4 += ARRAY_SIZE_W){
+                            if(tmp4 >= TABLE_START && tmp4 <= TABLE_START * 3){
+                                mgPlayer.gameArray[tmp4] = -2;
+                            }
+                        }
+                    }   else{
+                        for(var tmp5 =
+                            mgPlayer.lazerValue_H[(mgPlayer.lazerCheck-1)/2] * ARRAY_SIZE_W + (TABLE_SIZE_W-1)/2,
+                            tmp5Check = tmp5;
+                            tmp5 < tmp5Check + TABLE_SIZE_W; tmp5++){
+                            mgPlayer.gameArray[tmp5] = -22;
+                        }
+                    }
+                    tableColorControl();
+                    mgPlayer.lazerCheck++;
+                }
+
+                if(mgPlayer.timer === mgPlayer.lazerDelay[mgPlayer.lazerShot]){
+                    if(mgPlayer.lazerShot%2 === 0){
+                        for(var tmp4 = mgPlayer.lazerValue_W[mgPlayer.lazerShot/2];
+                            tmp4 <= TABLE_START * 3; tmp4 += ARRAY_SIZE_W){
+                            if(tmp4 >= TABLE_START && tmp4 <= TABLE_START * 3){
+                                mgPlayer.gameArray[tmp4] = 4;
+                            }
+                        }
+                    }   else{
+                        for(var tmp5 =
+                                mgPlayer.lazerValue_H[(mgPlayer.lazerShot-1)/2] * ARRAY_SIZE_W + (TABLE_SIZE_W-1)/2,
+                                tmp5Check = tmp5;
+                            tmp5 < tmp5Check + TABLE_SIZE_W; tmp5++){
+                            mgPlayer.gameArray[tmp5] = 44;
+                        }
+                    }
+                    tableColorControl();
+                    mgPlayer.lazerShot++;
+                }
+
+                if(mgPlayer.timer >= mgPlayer.lazerDelay[mgPlayer.lazerShotted] + 500){
+                    if(mgPlayer.lazerShotted%2 === 0){
+                        for(var tmp4 = mgPlayer.lazerValue_W[mgPlayer.lazerShotted/2];
+                            tmp4 <= TABLE_START * 3; tmp4 += ARRAY_SIZE_W){
+                            if(tmp4 >= TABLE_START && tmp4 <= TABLE_START * 3){
+                                if(mgPlayer.gameArray[tmp4 - 1] === LAZER_H || mgPlayer.gameArray[tmp4 + 1] === LAZER_H){
+                                    mgPlayer.gameArray[tmp4] = LAZER_H;
+                                }
+                                else if(mgPlayer.gameArray[tmp4 - 1] === READY_LAZER_H || mgPlayer.gameArray[tmp4 + 1] === READY_LAZER_H){
+                                    mgPlayer.gameArray[tmp4] = READY_LAZER_H;
+                                }
+                                else {
+                                    mgPlayer.gameArray[tmp4] = 0;
+                                }
+                            }
+                        }
+                    }   else{
+                        for(var tmp5 =
+                                mgPlayer.lazerValue_H[(mgPlayer.lazerShotted-1)/2] * ARRAY_SIZE_W + (TABLE_SIZE_W-1)/2,
+                                tmp5Check = tmp5;
+                            tmp5 < tmp5Check + TABLE_SIZE_W; tmp5++){
+                            if(mgPlayer.gameArray[tmp5 - ARRAY_SIZE_W] === LAZER_W ||
+                                mgPlayer.gameArray[tmp5 + ARRAY_SIZE_W] === LAZER_W){
+                                mgPlayer.gameArray[tmp5] = LAZER_W;
+                            }
+                            else if(mgPlayer.gameArray[tmp5 - ARRAY_SIZE_W] === READY_LAZER_W ||
+                                mgPlayer.gameArray[tmp5 + ARRAY_SIZE_W] === READY_LAZER_W){
+                                mgPlayer.gameArray[tmp5] = READY_LAZER_W;
+                            }
+                            else {
+                                mgPlayer.gameArray[tmp5] = 0;
+                            }
+                        }
+                    }
+                    tableColorControl();
+                    mgPlayer.lazerShotted++;
+                }
+
+                mgPlayer.timer += 10;
+            }, 10);
+            mgPlayer.isMGPlaying = 1;
+        }
+    }
+
+    function mainGame() {
+        this.gameArray =
+            Array.apply(null, new Array(ARRAY_SIZE_H * ARRAY_SIZE_W)).map(Number.prototype.valueOf,-1);
+        for(var tmp = TABLE_START; tmp <= TABLE_START * 3; tmp++){
+            this.gameArray[tmp] = 0;
+            if(tmp%ARRAY_SIZE_W === (TABLE_SIZE_W-1)/2 + (TABLE_SIZE_W-1))
+                tmp += TABLE_SIZE_W-1;
+        }
+        this.movement = 0;
+        this.isMGPlaying = 0;
+        this.mgInterval = 0;
+        this.lazerCount = 3;
+        this.timer = 0;
+        this.lazerCheck = 0;
+        this.lazerValue_W = new Array();
+        this.lazerValue_H = new Array();
+        this.lazerDelay = new Array();
+        this.lazerShot = 0;
+        this.lazerShotted = 0;
+        this.stage = -1;
+        this.stageBox = document.getElementById("stageNum");
+        this.stageDelay = 9000;
+        this.isGameOver = 1;
+    }
+    var mgPlayer = new mainGame();
+</script>
+</body>
+</html>

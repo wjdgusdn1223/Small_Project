@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script>
+        //순번 변수
+        var num = 1;
+
+        const WAVE_MAP = 150;
+
+        var leftWaveClear = 0;
+        var rightWaveClear = 0;
+
+        // 입력되는 파동의 정보를 저장할 클래스 정의
+        function wave(wH, wL, wS){
+            this.seq = num;//프리셋 순번
+            this.waveHeight = wH;//진폭
+            this.waveLength = wL;//파장
+            this.waveHertz = wS/wL;//진동수
+            this.waveTime = wL/wS;//주기
+            this.waveSpeed = wS;//속도
+
+            num++;
+        }
+
+        var waveList = Array();
+        var waveStartL = Array();
+        var waveStartR = Array();
+        var waveLeft = Array();
+        var waveRight = Array();
+        var wavePlus = Array();
+        var wavePlusA = Array();
+
+        for(var tmp = 0; tmp < 51; tmp++)
+            waveLeft[tmp] = Array();
+
+        for(var tmp = 0; tmp < 51; tmp++)
+            waveRight[tmp] = Array();
+
+        for(var tmp = 0; tmp < 51; tmp++)
+            wavePlusA[tmp] = Array();
+
+        for(var tmp = 0; tmp < WAVE_MAP; tmp++)
+            waveStartR[tmp] = 0;
+
+        for(var tmp = 0; tmp < WAVE_MAP; tmp++)
+            waveStartL[tmp] = 0;
+
+        function waveArray(lrSel){
+            var seqSelObj = document.getElementById("seqSel");
+            var preset = seqSelObj.value
+            var waveFrame = (Math.PI/(waveList[parseInt(preset) - 1].waveLength));
+            var waveFrameProcess = 0;
+
+            if(lrSel === 'left') {
+                wavePlay = setInterval(function () {
+                    var waveFrameHeight = waveList[parseInt(preset) - 1].waveHeight *
+                        (Math.sin(waveFrameProcess));
+                    if(leftWaveClear === 1)
+                        waveStartL.unshift(0);
+                    else
+                        waveStartL.unshift(waveFrameHeight);
+                    if(waveStartL.length === WAVE_MAP+1)
+                        waveStartL.pop();
+                    //waveLeftActivate(waveFrameHeight);
+
+                    waveFrameProcess += waveFrame;
+
+                }, 1000 / waveList[parseInt(preset) - 1].waveSpeed);
+            }
+            else{
+                wavePlay2 = setInterval(function () {
+                    var waveFrameHeight = waveList[parseInt(preset) - 1].waveHeight *
+                        (Math.sin(waveFrameProcess));
+                    if(rightWaveClear === 1)
+                        waveStartR.push(0);
+                    else
+                        waveStartR.push(waveFrameHeight);
+                    if(waveStartR.length === WAVE_MAP+1)
+                        waveStartR.shift();
+                    //waveRightActivate(waveFrameHeight);
+
+                    waveFrameProcess += waveFrame;
+
+                }, 1000 / waveList[parseInt(preset) - 1].waveSpeed);
+            }
+
+            waveSimulator = setInterval(function(){
+                for(var tmp = 0 ; tmp < WAVE_MAP; tmp++)
+                    wavePlus[tmp] = waveStartR[tmp] + waveStartL[tmp];
+                waveActivate(wavePlus);
+            }, 1000 / waveList[parseInt(preset) - 1].waveSpeed);
+        }
+
+        function waveActivate(wP){
+            var sum = "";
+            var wavePlusObj = document.getElementById("waveAnime3");
+
+            for(var tmp = 0; tmp < WAVE_MAP; tmp++){
+                for(var tmp2 = 0; tmp2 < 51; tmp2++){
+                    if(tmp2 >= (25-Math.round(wP[tmp])))
+                        wavePlusA[tmp2][tmp] ='&#x25CF;';
+                    else
+                        wavePlusA[tmp2][tmp] = '&#x25CB;';
+                }
+            }
+
+            for(var tmp2 = 0; tmp2 < wavePlusA.length; tmp2++){
+                for(var tmp3 = 0 ; tmp3 < wavePlusA[tmp2].length; tmp3++){
+                    sum += wavePlusA[tmp2][tmp3];
+                }
+                sum += "<br>";
+            }
+
+            wavePlusObj.innerHTML = sum;
+        }
+
+        function leftStop(){
+            leftWaveClear = 1;
+        }
+
+        function rightStop(){
+            rightWaveClear = 1;
+        }
+
+        /*function waveLeftActivate(WFH){
+            var sum = "";
+            var waveAnimeObj = document.getElementById("waveAnime");
+
+            WFH = Math.round(WFH);
+
+            for(var tmp = 0; tmp < 51; tmp++){
+                if(WFH > 0){
+                    if(tmp >= (25-WFH))
+                        waveLeft[tmp].unshift('&#x25CF;');
+                    else
+                        waveLeft[tmp].unshift('&#x25CB;');
+                }
+                else if(WFH < 0){
+                    if(tmp >= (25-WFH))
+                        waveLeft[tmp].unshift('&#x25CF;');
+                    else
+                        waveLeft[tmp].unshift('&#x25CB;');
+                }
+                else{
+                    if(tmp >= 25)
+                        waveLeft[tmp].unshift('&#x25CF;');
+                    else
+                        waveLeft[tmp].unshift('&#x25CB;');
+                }
+                if(waveLeft[tmp].length === WAVE_MAP + 1)
+                    waveLeft[tmp].pop();
+            }
+
+            for(var tmp2 = 0; tmp2 < waveLeft.length; tmp2++){
+                for(var tmp3 = 0 ; tmp3 < waveLeft[tmp2].length; tmp3++){
+                    sum += waveLeft[tmp2][tmp3];
+                }
+                sum += "<br>";
+            }
+
+            waveAnimeObj.innerHTML = sum;
+        }
+
+        function waveRightActivate(WFH){
+            var sum = "";
+            var waveAnimeObj = document.getElementById("waveAnime2");
+
+            WFH = Math.round(WFH);
+            if(waveRight[0].length === 0) {
+                for (var iCount = 0; iCount < 51; iCount++) {
+                    for (var iCount2 = 0; iCount2 < WAVE_MAP; iCount2++)
+                        waveRight[iCount][iCount2] = '&#x25CB;'
+                }
+            }
+            for(var tmp = 0; tmp < 51; tmp++){
+                if(WFH > 0){
+                    if(tmp >= (25-WFH))
+                        waveRight[tmp].push('&#x25CF;');
+                    else
+                        waveRight[tmp].push('&#x25CB;');
+                }
+                else if(WFH < 0){
+                    if(tmp >= (25-WFH))
+                        waveRight[tmp].push('&#x25CF;');
+                    else
+                        waveRight[tmp].push('&#x25CB;');
+                }
+                else{
+                    if(tmp >= 25)
+                        waveRight[tmp].push('&#x25CF;');
+                    else
+                        waveRight[tmp].push('&#x25CB;');
+                }
+                if(waveRight[tmp].length === WAVE_MAP + 1)
+                    waveRight[tmp].shift();
+            }
+
+            for(var tmp2 = 0; tmp2 < waveRight.length; tmp2++){
+                for(var tmp3 = 0 ; tmp3 < waveRight[tmp2].length; tmp3++){
+                    sum += waveRight[tmp2][tmp3];
+                }
+                sum += "<br>";
+            }
+
+            waveAnimeObj.innerHTML = sum;
+        }*/
+
+        function waveSortData(arg){
+            alert("정렬 : " + arg);
+
+            removeAllTrsFromTable();
+
+            switch(arg){
+                case 'seqAsc' :
+                    waveList.sort(function (a, b) {
+                        return a.seq - b.seq;
+                    });
+                    break;
+                case 'hAsc' :
+                    waveList.sort(function (a, b) {
+                        return a.waveHeight - b.waveHeight;
+                    });
+                    break;
+                case 'lAsc' :
+                    waveList.sort(function (a, b) {
+                        return a.waveLength - b.waveLength;
+                    });
+                    break;
+                case 'sDsc' :
+                    waveList.sort(function (a, b) {
+                        return b.waveSpeed - a.waveSpeed;
+                    });
+                    break;
+            }
+            for(let i in waveList){
+                addDataToHtmlTable(waveList[i].seq,
+                    waveList[i].waveHeight,
+                    waveList[i].waveLength,
+                    waveList[i].waveHertz,
+                    waveList[i].waveTime,
+                    waveList[i].waveSpeed);
+            }
+        }
+
+        function insertData(){
+            var waveHeightObj = document.getElementById("wHeight");
+            var waveLengthObj = document.getElementById("wLength");
+            var waveSpeedObj = document.getElementById("wSpeed");
+
+            //파장의 정보를 입력 받은 대로 입력
+            //만약 세가지 정보가 완벽하게 일치 한다면 중복처리되서 추가 되지 않는다.
+            if(parseInt(waveList.length) !== 0){
+                for(let i in waveList){
+                    if(waveList[i].waveHeight === waveHeightObj.value &&
+                       waveList[i].waveLength === waveLengthObj.value &&
+                       waveList[i].waveSpeed  === waveSpeedObj.value){
+                        break;
+                    }
+                    else if(parseInt(i) === waveList.length - 1){
+                        addDataToHtmlTable(num,
+                            waveHeightObj.value,
+                            waveLengthObj.value,
+                            parseFloat(waveSpeedObj.value) / parseFloat(waveLengthObj.value),
+                            parseFloat(waveLengthObj.value) / parseFloat(waveSpeedObj.value),
+                            waveSpeedObj.value);
+                        //필요정보들 배열에다가 push
+                        waveList.push(new wave(waveHeightObj.value, waveLengthObj.value, waveSpeedObj.value));
+                    }
+                }
+            }
+            else{//최초 추가될 경우
+                addDataToHtmlTable(num,
+                    waveHeightObj.value,
+                    waveLengthObj.value,
+                    parseFloat(waveSpeedObj.value) / parseFloat(waveLengthObj.value),
+                    parseFloat(waveLengthObj.value) / parseFloat(waveSpeedObj.value),
+                    waveSpeedObj.value);
+                //필요정보들 배열에다가 push
+                waveList.push(new wave(waveHeightObj.value, waveLengthObj.value, waveSpeedObj.value));
+            }
+        }
+
+        function addDataToHtmlTable(seq, wHeight, wLength, wHertz, wTime, wSpeed){
+            var createdTr = document.createElement("TR");
+            var createdTd = document.createElement("TD");
+
+            createdTd.appendChild(document.createTextNode(seq));
+            createdTr.appendChild(createdTd);
+
+            createdTd = document.createElement("TD");
+            createdTd.appendChild(document.createTextNode(wHeight));
+            createdTr.appendChild(createdTd);
+
+            createdTd = document.createElement("TD");
+            createdTd.appendChild(document.createTextNode(wLength));
+            createdTr.appendChild(createdTd);
+
+            createdTd = document.createElement("TD");
+            createdTd.appendChild(document.createTextNode(wHertz));
+            createdTr.appendChild(createdTd);
+
+            createdTd = document.createElement("TD");
+            createdTd.appendChild(document.createTextNode(wTime));
+            createdTr.appendChild(createdTd);
+
+            createdTd = document.createElement("TD");
+            createdTd.appendChild(document.createTextNode(wSpeed));
+            createdTr.appendChild(createdTd);
+
+            var tableObj = document.getElementById("waveTableBody");
+            tableObj.appendChild(createdTr);
+        }
+
+        function removeAllTrsFromTable(){
+            var tableObj = document.getElementById("waveTableBody");
+
+            while(tableObj.children.length > 0){
+                tableObj.removeChild(tableObj.firstChild);
+            }
+        }
+    </script>
+</head>
+<body>
+<table width = "1000" cellpadding = "0">
+    <tr>
+        <td>진폭  <input id = "wHeight" type = "text" size = "5"></td>
+        <td>파장  <input id = "wLength" type = "text" size = "5"></td>
+        <td>파속  <input id = "wSpeed" type = "text" size = "5"></td>
+        <td><input type = "button" value = "파동 정보 입력" onclick = insertData()></td>
+        <td><input type = "button" value = "좌측 파동 발생" onclick = waveArray('left')></td>
+        <td>순번 선택  <input id = "seqSel" type = "text" size = "5"></td>
+        <td><input type = "button" value = "우측 파동 발생" onclick = waveArray('right')></td>
+        <td><input type = "button" value = "목록 출력" onclick = waveSortData('seqAsc')></td>
+        <td><input type = "button" value = "진폭 오름차순" onclick = waveSortData('hAsc')></td>
+        <td><input type = "button" value = "파장 오름차순" onclick = waveSortData('lAsc')></td>
+        <td><input type = "button" value = "속도 내림차순" onclick = waveSortData('sDsc')></td>
+        <td><input type = "button" value = "좌측 파동 정지" onclick = leftStop()></td>
+        <td><input type = "button" value = "우측 파동 정지" onclick = rightStop()></td>
+        <td><input type = "button" value = "시뮬 정지" onclick = clearInterval(waveSimulator)></td>
+    </tr>
+</table>
+<table id = "waveTable" width = "1000" cellpadding="0" border = "1">
+    <thead>
+        <tr>
+            <td>순번</td>
+            <td>진폭</td>
+            <td>파장</td>
+            <td>진동 수</td>
+            <td>주기</td>
+            <td>속도</td>
+        </tr>
+    </thead>
+    <tbody id = "waveTableBody">
+    </tbody>
+</table>
+<div id = "waveAnime"></div>
+<div id = "waveAnime2"></div>
+<div id = "waveAnime3"></div>
+</body>
+</html>

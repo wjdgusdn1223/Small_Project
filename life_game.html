@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<!--
+    # 라이프게임은 간단한 규칙에 의해 정의 되는 게임이다.
+    #
+    # 생존 세포 수     1 이하    2   3   4 이상
+    # 세포 생존 칸      OFF     ON  ON    OFF
+    # 세포 사망 칸      OFF    OFF  ON    OFF
+    #
+    # ON은  다음 세대에 삶을 얻게 된다는 의미
+    # OFF는 다음 세대에 죽게 된다는 의미
+    #
+    # 위 ON/OFF 는  인접한 생존 세포 수에 의해 결정 된다.
+
+    가. 프로그램을 만들 때 있어야 할 기능
+    1. 시작 버튼      : 라이프 게임 인터벌을 시작 할 버튼
+    2. 정지 버튼      : 라이프 게임 인터벌 중지      버튼
+    3. 추가/삭제 버튼 : 라이프 게임 요소 추가/삭제   버튼
+            -> 3차 수정 추가/삭제는 클릭 시 이벤트에서 선택제어문으로 제어 가능 하므로 삭제
+    3. 초기화 버튼    : 라이프 게임 클리어           버튼
+    4. 속도 버튼      : 라이프 게임 인터벌 속도 조절 버튼
+        -> 6차 수정 현재 속도를 알 수 있게 현재 속도 div 추가
+    5. 현재 속도 출력  : 라이프 게임의 현재 속도 출력
+        -> 7차 수정 랜덤으로 칸에 세포들을 입력해주는 랜덤 배치 버튼 추가
+    6. 랜덤 버튼      : 랜덤으로 칸마다 세포들 배치하는 버튼
+        -> 8차 수정 현재 활동하고 있는 세포 스냅 샷 찍고 파일 저장
+                    저장된 파일을 파일명을 통해 불러오기 기능 추가
+        -> 10차 수정 자바스크립트로 크롬에서 파일 입출력을 구현하기 어려움
+                    텍스트 area를 통해 주고 받는 식으로 구현
+    7. 저장 버튼      : 현재 활동 중인 세포 전체 스냅샷 버튼
+    8. 프리셋 버튼    : 저장 해놓은 텍스트 값을 토대로 배치하는 버튼
+
+    나. 라이프 게임 테이블의 크기
+    동적으로 변화하게 할 이유가 없으므로
+    적당한 크기인 30 * 30 정도로 설정
+        -> 1차 수정 30 * 30으로 하되 동적으로 변경할 수 있게 작성
+        -> 4차 수정 60 * 60으로 수정
+        -> 9차 수정 넉넉하게 100 * 100 으로 설정
+
+    다. 필수 메서드
+    0. 메인 메서드
+    1. 테이블 생성 및 이벤트 추가 메서드
+    2. 테이블 클릭 이벤트 처리 메서드
+    3. 라이프 게임 인터벌 메서드
+        ㄴ 3_1. 인터벌 안에서 돌아갈 칸의 생명 제어 메서드
+        ㄴ 3_2. 인터벌 안에서 칸의 색깔을 바꿔줄 메서드
+            -> 2차 수정 색깔을 바꾸는 3_2 메서드는 이벤트 시 실행되는 메서드로 해결 가능 하므로
+               인터벌 안에서 하지 않기로 결정
+            -> 5차 수정 프로그램을 짜다보니 3_2는 무조건 필요하다는 것을 실감
+               이벤트와는 별개로 무조건 필요함.
+    4. 라이프 게임 인터벌 중지 메서드
+    5. 라이프 게임 인터벌 초기화 메서드
+    6. 추가/삭제를 결정할 변수 제어 메서드 X
+        -> 3차 수정 추가/삭제는 클릭 시 이벤트에서 선택제어문으로 제어 가능 하므로 삭제
+    7. 속도 조절을 좌지우지할 변수 제어 메서드
+        -> 7차 수정 랜덤으로 칸에 세포들을 입력해주는 랜덤 배치 메서드 추가
+    8. 랜덤으로 세포를 배치해줄 메서드
+        -> 8차 수정 현재 활동하고 있는 세포 스냅 샷 찍고 파일 저장
+                    저장된 파일을 파일명을 통해 불러오기 기능 추가
+        -> 10차 수정 자바스크립트로 크롬에서 파일 입출력을 구현하기 어려움
+                    텍스트 area를 통해 주고 받는 식으로 구현
+    9. 현재 테이블의 lifeData를 텍스트로 출력하는 메서드
+    10. 텍스트 area의 value를 토대로 lifeData 값 설정 후
+        테이블에 세포 배치하는 메서드
+-->
+<input type = "button" value = "게임 시작" onclick="playGame()">
+<input type = "button" value = "게임 중지" onclick="stopGame()">
+<input type = "button" value = "게임 초기화" onclick="clearGame()" on>
+<input type = "text" id = "speedValue">
+<input type = "button" value = "속도 입력" onclick="gameSpeed()">
+<input type = "button" value = "랜덤 배치" onclick="randomCell()">
+<input type = "button" value = "상태 저장" onclick="saveLifeData()">
+<input type = "button" value = "입력 배치" onclick="loadLifeData()">
+<div id = "gameSpeedNow">
+    0의 속도로 진행 중 입니다. 진행 중인 게임을 초기화하시고 싶으시다면 '게임 초기화' 버튼을 누르세요.
+    랜덤배치는 오직 멈췄을 때만 가능합니다.
+    저장하고 싶으시면 '상태 저장' 버튼을 누르시고 밑의 해당 번호를 복사하세요.
+    불러오고 싶으시면 복사된 숫자들을 그대로 밑에 입력한 후 '입력 배치' 버튼을 누르세요.(멈췄을 때만 가능)
+</div>
+
+<table id = "lifeTable" cellpadding="0" border = "1">
+    <thead id = "lifeTableHead" style = "text-align: center ">
+    </thead>
+    <tbody id = "lifeTableBody">
+    </tbody>
+</table>
+<textarea id = "saveData" cols="310" rows="10"></textarea>
+<script>
+    //테이블 크기
+    const TABLE_SIZE = 100;
+    const TABLE_LENGTH = 5000;
+    const ON  = 1;
+    const OFF = 0;
+
+    //테이블 생성
+    createTable();
+    var lifeGamePlayer = new lifeGame();
+
+    function createTable(){
+        var createTR = document.createElement("TR");
+        var createTD = document.createElement("TD");
+
+        for(var tmp = 0; tmp < TABLE_SIZE; tmp++){
+            createTD.appendChild(document.createTextNode("#"));
+            createTR.appendChild(createTD);
+            createTD = document.createElement("TD");
+        }
+
+        createTR.setAttribute("height", `${TABLE_LENGTH / TABLE_SIZE}`);
+
+        var mainTable = document.getElementById("lifeTable");
+        mainTable.setAttribute("width", `${TABLE_LENGTH}`);
+
+        var tableHead = document.getElementById("lifeTableHead");
+        tableHead.appendChild(createTR);
+        createTR = document.createElement("TR");
+
+        var tableBody = document.getElementById("lifeTableBody");
+
+        var idCount = 0;
+        for(var tmp = 0; tmp < TABLE_SIZE; tmp++) {
+            for (var tmp2 = 0; tmp2 < TABLE_SIZE; tmp2++) {
+                createTD = document.createElement("TD");
+
+                idCount = tmp * TABLE_SIZE + tmp2;
+                createTD.setAttribute('id', `${idCount}`);
+                createTD.setAttribute('onClick', `lifeDataControl(${idCount})`);
+
+                createTR.appendChild(createTD);
+                createTD = document.createElement("TD");
+            }
+            createTR.setAttribute("height", `${TABLE_LENGTH / TABLE_SIZE}`);
+            tableBody.appendChild(createTR);
+            createTR = document.createElement("TR");
+        }
+    }
+
+    function lifeDataControl(whichTD) {
+        var thisTD = document.getElementById(whichTD);
+        if(!(thisTD.style.backgroundColor === "black")) {
+            thisTD.style.backgroundColor = "black";
+            lifeGamePlayer.lifeData[parseInt(whichTD)] = ON;
+        }
+        else {
+            thisTD.style.backgroundColor = "white";
+            lifeGamePlayer.lifeData[parseInt(whichTD)] = OFF;
+        }
+    }
+
+    function lifeControl() {
+        for (var tmp = 0 ,nextLifetmp = 0; tmp < lifeGamePlayer.lifeData.length; tmp++) {
+            var liveCellCount = 0;
+            if (!(tmp % TABLE_SIZE === 0)) { //왼쪽 검사
+                if (lifeGamePlayer.lifeData[tmp - 1] === ON)
+                    liveCellCount++;
+                if (!(tmp < TABLE_SIZE)) { //위쪽 검사
+                    if (lifeGamePlayer.lifeData[tmp - TABLE_SIZE - 1] === ON)
+                        liveCellCount++;
+                }
+                if (!(tmp >= TABLE_SIZE * TABLE_SIZE - TABLE_SIZE)) { //아래쪽 검사
+                    if (lifeGamePlayer.lifeData[tmp + TABLE_SIZE - 1] === ON)
+                        liveCellCount++;
+                }
+            }
+            if (!(tmp < TABLE_SIZE)) { //위쪽 검사
+                if (lifeGamePlayer.lifeData[tmp - TABLE_SIZE] === ON)
+                    liveCellCount++;
+                if (!(tmp % TABLE_SIZE === TABLE_SIZE - 1)) { //우측 검사
+                    if (lifeGamePlayer.lifeData[tmp - TABLE_SIZE + 1] === ON)
+                        liveCellCount++;
+                }
+            }
+            if (!(tmp % TABLE_SIZE === TABLE_SIZE - 1)) { // 우측 검사
+                if (lifeGamePlayer.lifeData[tmp + 1] === ON)
+                    liveCellCount++;
+            }
+            if (!(tmp >= TABLE_SIZE * TABLE_SIZE - TABLE_SIZE)) { // 아래쪽 검사
+                if (lifeGamePlayer.lifeData[tmp + TABLE_SIZE] === ON)
+                    liveCellCount++;
+                if (!(tmp % TABLE_SIZE === TABLE_SIZE - 1)) { //우측 검사
+                    if (lifeGamePlayer.lifeData[tmp + TABLE_SIZE + 1] === ON)
+                        liveCellCount++;
+                }
+            }
+
+            if (lifeGamePlayer.lifeData[tmp] === OFF) {
+                if (liveCellCount === 3) {
+                    lifeGamePlayer.nextLifeData[nextLifetmp] = tmp + "," + ON;
+                    nextLifetmp++;
+                }
+            } else {
+                if (liveCellCount <= 1) {
+                    lifeGamePlayer.nextLifeData[nextLifetmp] = tmp + "," + OFF;
+                    nextLifetmp++;
+                }
+                if (liveCellCount >= 4) {
+                    lifeGamePlayer.nextLifeData[nextLifetmp] = tmp + "," + OFF;
+                    nextLifetmp++;
+                }
+            }
+        }
+        for (var tmp2 = 0; lifeGamePlayer.nextLifeData[tmp2] !== -1; tmp2++){
+            var keyValue = lifeGamePlayer.nextLifeData[tmp2].split(",");
+            lifeGamePlayer.lifeData[parseInt(keyValue[0])] = parseInt(keyValue[1]);
+            lifeGamePlayer.nextLifeData[tmp2] = -1;
+        }
+    }
+
+    function lifeExpress() {
+        for(var tmp = 0; tmp < lifeGamePlayer.lifeData.length; tmp++){
+            var lifeChange = document.getElementById(`${tmp}`);
+            if(lifeGamePlayer.lifeData[tmp] === ON){
+                if(!(lifeChange.style.backgroundColor === "black")) {
+                    lifeChange.style.backgroundColor = "black";
+                }
+            }
+            else{
+                if(!(lifeChange.style.backgroundColor === "white"))
+                    lifeChange.style.backgroundColor = "white";
+            }
+        }
+    }
+
+    function playGame() {
+        lifeGamePlayer.isGameStopping = 0;
+        if(lifeGamePlayer.isGamePlaying === 0){
+            lifeGamePlayer.lifeGameInterval = setInterval(function(){
+                if(lifeGamePlayer.isGameStopping === 0) {
+                    lifeControl();
+                    lifeExpress();
+                }
+            }, 1000 - lifeGamePlayer.lifeSpeed);
+            lifeGamePlayer.isGamePlaying = 1;
+        }
+    }
+
+    function stopGame() {
+        lifeGamePlayer.isGameStopping = 1;
+    }
+
+    function clearGame() {
+        clearInterval(lifeGamePlayer.lifeGameInterval);
+        lifeGamePlayer.lifeData =
+            Array.apply(null, new Array(TABLE_SIZE * TABLE_SIZE)).map(Number.prototype.valueOf,0);
+        lifeGamePlayer.nextLifeData =
+            Array.apply(null, new Array(TABLE_SIZE * TABLE_SIZE)).map(Number.prototype.valueOf,-1);
+        lifeExpress();
+
+        lifeGamePlayer.isGamePlaying = 0;
+        lifeGamePlayer.isGameStopping = 1;
+    }
+    
+    function gameSpeed() {
+        var nSpeed = document.getElementById("gameSpeedNow");
+        var gSpeed = document.getElementById("speedValue");
+        lifeGamePlayer.lifeSpeed = parseInt(gSpeed.value);
+        clearInterval(lifeGamePlayer.lifeGameInterval);
+
+        if(lifeGamePlayer.isGameStopping === 0) {
+            lifeGamePlayer.isGamePlaying = 0;
+            playGame();
+        }   else{
+            lifeGamePlayer.isGamePlaying = 0;
+        }
+        nSpeed.innerHTML = gSpeed.value + "의 속도로 진행 중 입니다. " +
+            "진행 중인 게임을 초기화하시고 싶으시다면 clear 버튼을 누르세요 " +
+            "랜덤배치는 오직 멈췄을 때만 가능합니다. " +
+            "저장하고 싶으시면 '상태 저장' 버튼을 누르시고 밑의 해당 번호를 복사하세요. " +
+            "불러오고 싶으시면 복사된 숫자들을 그대로 밑에 입력한 후 '입력 배치' 버튼을 누르세요.(멈췄을 때만 가능)"
+    }
+
+    function randomCell() {
+        if(lifeGamePlayer.isGameStopping === 1 && lifeGamePlayer.isGamePlaying === 0) {
+            for (var tmp = 0; tmp < lifeGamePlayer.lifeData.length; tmp++) {
+                lifeGamePlayer.lifeData[tmp] = parseInt(Math.random() * 2);
+            }
+            lifeExpress();
+        }
+        else
+            alert("게임을 초기화시킨 상태에서만 가능합니다");
+    }
+
+    function saveLifeData() {
+        var saveDataArea = document.getElementById("saveData");
+        var lifeDataSave = "";
+
+        for(var tmp = 0; tmp < lifeGamePlayer.lifeData.length; tmp++){
+            if(tmp === lifeGamePlayer.lifeData.length - 1)
+                lifeDataSave += lifeGamePlayer.lifeData[tmp];
+            else
+                lifeDataSave += lifeGamePlayer.lifeData[tmp] + ",";
+        }
+        saveDataArea.value = lifeDataSave;
+    }
+
+    function loadLifeData() {
+        if(lifeGamePlayer.isGameStopping === 1 && lifeGamePlayer.isGamePlaying === 0) {
+            var saveDataArea = document.getElementById("saveData");
+            var lifeDataLoad = saveDataArea.value.split(",");
+
+            for (var tmp = 0; tmp < lifeDataLoad.length; tmp++) {
+                lifeGamePlayer.lifeData[tmp] = parseInt(lifeDataLoad[tmp]);
+            }
+            lifeExpress();
+        }
+        else
+            alert("게임을 초기화시킨 상태에서만 가능합니다");
+    }
+
+    //메인 메서드
+    function lifeGame() {
+        this.lifeData =
+            Array.apply(null, new Array(TABLE_SIZE * TABLE_SIZE)).map(Number.prototype.valueOf,0);
+        this.nextLifeData =
+            Array.apply(null, new Array(TABLE_SIZE * TABLE_SIZE)).map(Number.prototype.valueOf,-1);
+        this.isGamePlaying = 0;
+        this.lifeSpeed = 0;
+        this.isGameStopping = 1;
+        this.lifeGameInterval = 0;
+    }
+</script>
+</body>
+</html>
